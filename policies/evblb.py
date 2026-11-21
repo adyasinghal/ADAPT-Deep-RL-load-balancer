@@ -8,6 +8,7 @@ paper's episodic intervals; a server dispatches early only when rule 5 forces it
 
 * B2: ``EVBLB(dt=2.0)``
 * B3: ``EVBLB(dt)`` for dt in {0.25, 0.5, 1, 4}
+* B6: ``PerfectInfo()``: dispatch every 0.25 s with free, instant load information
 """
 
 from __future__ import annotations
@@ -63,3 +64,16 @@ class EVBLB(BasePolicy):
             if p is not None and mask[action] and p > best:
                 best_action, best = action, p
         return best_action
+
+
+class PerfectInfo(EVBLB):
+    """B6: EVBLB that dispatches every 0.25 s and gets neighbour loads for free.
+
+    Only the poll is free; the dispatch round itself still costs the usual amount.
+    """
+
+    needs_poll = False
+
+    def __init__(self) -> None:
+        super().__init__(dt=0.25)
+        self.name = "perfect"

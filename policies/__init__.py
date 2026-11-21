@@ -10,13 +10,14 @@ from collections.abc import Callable
 from typing import Any
 
 from policies.base import BasePolicy
-from policies.evblb import EVBLB
+from policies.evblb import EVBLB, PerfectInfo
 from policies.nearest import Nearest
 from policies.random_policy import RandomPolicy
 
 REGISTRY: dict[str, Callable[..., BasePolicy]] = {
     "nearest": Nearest,
     "evblb": EVBLB,
+    "perfect": PerfectInfo,
     "random": RandomPolicy,
 }
 

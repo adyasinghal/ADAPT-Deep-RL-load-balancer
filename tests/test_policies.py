@@ -5,7 +5,7 @@ import pytest
 
 from core.actions import HOLD, LOCAL, send_action
 from core.config import load_config
-from policies.evblb import EVBLB
+from policies.evblb import EVBLB, PerfectInfo
 from policies.nearest import Nearest
 from policies.random_policy import RandomPolicy
 from sim.rollout import run_episode
@@ -74,3 +74,12 @@ def test_poll_round_refreshes_the_cache():
     assert w.counter.counts[0] == 2  # one POLL per neighbour
     assert node.cache_prem[0] == pytest.approx(w.nodes[1].p_rem())
     assert node.cache_time[0] > 0.5
+
+
+def test_perfect_info_dispatches_every_interval_without_polling():
+    policy = PerfectInfo()
+    assert policy.dt == 0.25 and not policy.needs_poll
+    dotted = {"topology.n_servers": 10, "run.duration": 20.0, "run.arrival_cutoff": 2.0}
+    _, summary = run_episode(load_config(dotted=dotted), policy, seed=0)
+    assert summary["msg_POLL"] == 0
+    assert summary["violations"] == 0 and summary["unfinished"] == 0
