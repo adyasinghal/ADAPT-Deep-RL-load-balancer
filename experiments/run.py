@@ -70,6 +70,22 @@ def expand(exp: dict[str, Any]) -> list[dict[str, Any]]:
     return jobs
 
 
+def select(jobs: list[dict[str, Any]], args: argparse.Namespace) -> list[dict[str, Any]]:
+    """Keep only the jobs matching the --methods / --workloads / --rhos / --n filters."""
+    filters = {
+        "label": args.methods,
+        "workload": args.workloads,
+        "rho": args.rhos,
+        "n": args.n,
+    }
+    for key, wanted in filters.items():
+        if wanted:
+            jobs = [j for j in jobs if j[key] in wanted]
+    if not jobs:
+        raise SystemExit("no runs left after filtering")
+    return jobs
+
+
 def run_job(job: dict[str, Any], out_dir: str) -> dict[str, Any]:
     """Run one job, write its time series and return its summary row."""
     dotted = {
@@ -109,6 +125,10 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=os.cpu_count() or 1)
     parser.add_argument("--duration", type=float, help="override run.duration")
     parser.add_argument("--seeds", type=int, nargs="+", help="override the seed list")
+    parser.add_argument("--methods", nargs="+", help="only run these method labels")
+    parser.add_argument("--workloads", nargs="+", help="only run these workloads")
+    parser.add_argument("--rhos", type=float, nargs="+", help="only run these loads")
+    parser.add_argument("--n", type=int, nargs="+", help="only run these server counts")
     parser.add_argument(
         "--quick", action="store_true", help="smoke test: 300 s runs, first seed only"
     )
@@ -127,7 +147,7 @@ def main() -> None:
 
     out_dir = Path(args.out) / exp["name"]
     out_dir.mkdir(parents=True, exist_ok=True)
-    jobs = expand(exp)
+    jobs = select(expand(exp), args)
     print(f"{exp['name']}: {len(jobs)} runs on {args.workers} workers -> {out_dir}")
     started = time.perf_counter()
     rows = []

@@ -1,8 +1,11 @@
 """Tests for the experiment runner."""
 
-import pandas as pd
+import argparse
 
-from experiments.run import expand, run_file_name, run_job
+import pandas as pd
+import pytest
+
+from experiments.run import expand, run_file_name, run_job, select
 
 
 def test_grid_expansion_and_labels():
@@ -30,4 +33,18 @@ def test_run_job_writes_time_series(tmp_path):
     assert row["method"] == "evblb_dt1" and row["violations"] == 0
     ts = pd.read_csv(tmp_path / run_file_name("evblb_dt1", "W1", 0.5, 10, 100))
     assert list(ts["t"]) == list(range(1, 31))
-    assert {"lbf", "throughput", "resp_mean", "msg_POLL"} <= set(ts.columns)
+    assert {"lbf", "util_mean", "throughput", "resp_mean", "msg_POLL"} <= set(ts.columns)
+    assert ts["util_mean"].between(0, 1).all()
+
+
+def test_filters_pick_one_cell():
+    exp = {
+        "name": "t",
+        "methods": [{"name": "nearest"}, {"name": "evblb", "dt": 2.0}],
+        "grid": {"workload": ["W1", "W2"], "rho": [0.7, 0.9], "n": [50], "seed": [100, 101]},
+    }
+    args = argparse.Namespace(methods=["evblb_dt2"], workloads=["W2"], rhos=[0.9], n=None)
+    jobs = select(expand(exp), args)
+    assert len(jobs) == 2 and {j["seed"] for j in jobs} == {100, 101}
+    with pytest.raises(SystemExit):
+        select(expand(exp), argparse.Namespace(methods=["nope"], workloads=None, rhos=None, n=None))
