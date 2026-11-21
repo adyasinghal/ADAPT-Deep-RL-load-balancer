@@ -1,0 +1,17 @@
+# M4 check: trained ADAPT and its variants against EVBLB on unseen test seeds.
+# adapt_ep0 is the network straight after behaviour cloning (before any DQN update): it
+# should already be about as good as the EVBLB it imitates.
+name: adapt_eval
+methods:
+  - {name: evblb, dt: 2.0}
+  - {name: perfect}
+  - {name: adapt, label: adapt_ep0, weights: weights/adapt_bc.npz}
+  - {name: adapt}
+  - {name: adapt, variant: noWS}
+  - {name: adapt, variant: fixedDT}
+  - {name: adapt, variant: poll}
+grid:
+  workload: [W1, W2]
+  rho: [0.7, 0.9]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]

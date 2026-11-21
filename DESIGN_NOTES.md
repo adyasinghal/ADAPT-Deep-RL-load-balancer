@@ -58,3 +58,29 @@ the report.
 - `tests/test_properties.py` runs 200 derandomised hypothesis examples (n 5-20, rho 0.3-1.1, loss up to 0.2, optional crash, random protocol traits, W1/W2) in strict mode; about 20 s.
 - Mutation check done by hand on the protocol: removing receiver de-duplication, resending already-rejected tasks, and giving up on a live server after k timeouts each make the suite fail.
 - B4 (Q-learning update) and B7 (TOPSIS score) tests belong with those baselines (workstream 3).
+
+## ADAPT agent (`rl/`, `policies/adapt.py`)
+- The reward is exactly the brief's (W counts tasks waiting in this server's own buffer and queue). We checked for "dumping" (a server is not charged for tasks it sends away): the trained agent sends LOCAL about 60% of the time and spreads the rest over its neighbours, so it does not dump; the local-LBF term and the capacity mask seem to be enough.
+- Reward weights are the brief's starting values (1, 0.5, 0.2, 0.1, 5); the one allowed tuning pass has not been done yet. The blocking weight is the obvious candidate (see the results below).
+- Episodes end on a time limit, never in a true terminal state, so every transition bootstraps (no `done` flag in the replay buffer).
+- Training episodes use `arrival_cutoff: 0` and no drain; evaluation runs use the normal 1800 s scenario with drain.
+- Not in the brief: gradient-norm clipping at 10, 5000 transitions in the buffer before the first update, torch limited to one thread (faster for this tiny MLP).
+- epsilon decays per decision instant (= gradient step): 1.0 -> 0.05 over 50k steps without the warm start, 0.2 -> 0.02 with it. 20 episodes are 48k steps, so epsilon ends near its final value.
+- After every training episode a greedy, no-learning run on one fixed *training* scenario (W1, rho 0.7, seed 0) is logged as `eval_reward` / `eval_resp`. Raw episode rewards mostly reflect the topology and load drawn for that episode; this column is the learning curve to plot (F7).
+- Inference runs the exported `.npz` weights in numpy (`rl/numpy_net.py`); a test checks it matches the torch forward pass. Experiment workers never import torch.
+- ADAPT-fixedDT allows a dispatch only once 2 s have passed since that server's last dispatch (per-server timer, rule 5 still wins). ADAPT-poll sends no heartbeats (it would never read them).
+- Weights are small (~90 kB each) and committed under `weights/`; `python -m rl.train --variant <v>` reproduces them bit for bit.
+
+## Warm start (`rl/imitation.py`)
+- **(deviation)** The behaviour-cloning loss is cross-entropy on the masked Q-values *plus* the normal TD loss on the same batch. Cross-entropy alone fixes only the ranking of the Q-values and leaves their scale arbitrary, so the first DQN updates would undo it.
+- The expert is EVBLB in ADAPT's action space: per-server 2 s timer, then the allowed candidate with the largest *true* P_rem (read through `ctx`, no poll cost). It obeys ADAPT's masks, including the capacity mask, so every expert action is one the network may take.
+- 3 expert episodes give 360k transitions; the 200k replay buffer keeps the most recent 200k, which are also what fine-tuning starts from.
+- After cloning, the greedy network agrees with the expert on 89% of the states where there was a real choice (57% for fixedDT, whose masks hide the timing part).
+
+## M4 results (`results/adapt_eval/summary.csv`, 1800 s, n = 50, test seeds 100-104)
+- Paired per-seed differences (same topology), 95% CI. Trained ADAPT vs EVBLB (B2), mean response time: -4.1 +- 2.4 s (W1, rho 0.7), -8.3 +- 5.8 (W1, 0.9), -4.4 +- 2.4 (W2, 0.7), -9.4 +- 5.8 (W2, 0.9). It also beats B6 (perfect information) on the mean, but those intervals include 0.
+- Messages per task: ADAPT 1.29-1.33 vs EVBLB 1.96-2.23 (intervals do not overlap).
+- Blocking is worse: ADAPT blocks +0.2-0.3 percentage points more than EVBLB at rho 0.7 and +2.2-2.7 points more at rho 0.9 (paired CIs exclude 0). ADAPT trades a few blocked tasks for much lower latency; raising `w_blocked` is the natural thing to tune.
+- Episode 0 (straight after cloning, `adapt_ep0`): response time equal to EVBLB within noise (paired differences -2.3 to +0.0 s, all CIs include 0) with fewer messages (1.25-1.56 per task), but it blocks more (+0.8 to +5.3 points). So the "as good as B2 at episode 0" check holds for latency and messages, not for blocking.
+- Warm start vs no warm start: by episode 20 they are about equal (warm start -0.7 to -1.1 s better at rho 0.9, CIs include 0); the warm start mainly gives a better curve early on.
+- ADAPT-fixedDT is no better than the cloned network, so most of the gain comes from learning *when* to dispatch, which fits E2 (short intervals are cheap in latency). ADAPT-poll matches ADAPT on latency but needs about 5 messages per task.

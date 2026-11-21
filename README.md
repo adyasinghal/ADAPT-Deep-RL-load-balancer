@@ -20,10 +20,13 @@ pip install -r requirements.txt
 | Path | What is in it |
 | --- | --- |
 | `config/default.yaml` | every simulation constant |
-| `config/experiments/` | one YAML per experiment (E1, E2 so far) |
+| `config/experiments/` | one YAML per experiment (E1, E2, the ADAPT evaluation) |
 | `core/` | model, `ServerNode` protocol, messages, transport, metrics, invariant checks |
 | `sim/` | event engine, the RL env (`EdgeEnv`, `StubEnv`), workloads, `run_episode` |
-| `policies/` | baselines: nearest (B1), EVBLB (B2/B3), perfect information (B6), random |
+| `policies/` | baselines: nearest (B1), EVBLB (B2/B3), perfect information (B6), random; ADAPT inference |
+| `rl/` | Q-network, replay buffer, Double DQN, EVBLB imitation warm start, training script |
+| `config/train.yaml` | training settings |
+| `weights/` | trained ADAPT weights (`.pt` for torch, `.npz` for numpy inference) |
 | `experiments/run.py` | runs an experiment grid and writes CSVs to `results/<exp>/` |
 | `tests/` | unit, protocol and property-based tests |
 
@@ -56,3 +59,16 @@ while True:
         break
 print(env.summary())
 ```
+
+## Training and evaluating ADAPT
+
+```bash
+python -m rl.train --config config/train.yaml                     # ADAPT, ~1 min on a laptop CPU
+python -m rl.train --config config/train.yaml --variant noWS      # also fixedDT, poll
+python -m experiments.run --config config/experiments/adapt_eval.yaml   # 140 runs, ~3.5 min on 8 cores
+```
+
+Training writes `weights/adapt[_variant].pt/.npz` (and `_bc` weights straight after the warm
+start) and a per-episode log to `results/training/`. The `eval_reward` column of that log is
+the learning curve. In experiment YAMLs ADAPT is `{name: adapt}` or
+`{name: adapt, variant: noWS}`; `weights:` points at any other `.npz`.
