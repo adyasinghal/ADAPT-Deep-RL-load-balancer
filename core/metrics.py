@@ -105,6 +105,7 @@ class MetricsRecorder:
         lost: int,
         counter: MessageCounter,
         violations: int,
+        reruns_after_crash: int = 0,
     ) -> dict[str, Any]:
         """One row of ``summary.csv``."""
         ts = self.timeseries()
@@ -135,6 +136,7 @@ class MetricsRecorder:
             "blocked": self.blocked,
             "unfinished": outstanding,
             "violations": violations,
+            "reruns_after_crash": reruns_after_crash,
             "msgs_total": counter.total,
             **counter.as_dict(),
         }

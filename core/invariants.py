@@ -51,6 +51,7 @@ class TaskLedger:
         self.counts = [0] * len(TaskState)
         self.created = 0
         self.violations: Counter[str] = Counter()
+        self.reruns_after_crash = 0
 
     def register(self, task: Task) -> None:
         """Start tracking a freshly created task (state NEW)."""
@@ -74,6 +75,17 @@ class TaskLedger:
             raise InvariantViolation(f"{prop}: {detail}")
         if self.violations[prop] <= 5:
             log.warning("%s violated: %s", prop, detail)
+
+    def rerun_after_crash(self, task: Task) -> None:
+        """A sender took back a task that had in fact finished at a server that then crashed.
+
+        This only happens when a crash coincides with lost replies (every ACK for the task and
+        its DONE): the sender cannot tell "never ran" from "ran, but nobody heard". A real
+        system would run the task again (at-least-once); the simulator counts it instead of
+        re-running the same task object. It is not a protocol bug, so strict mode ignores it.
+        """
+        self.reruns_after_crash += 1
+        log.info("task %d would run again after the crash of its executor", task.id)
 
     def count(self, state: TaskState) -> int:
         """Number of tasks currently in ``state``."""

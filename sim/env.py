@@ -220,6 +220,7 @@ class EdgeEnv:
             lost=w.ledger.count(TaskState.LOST),
             counter=w.counter,
             violations=w.ledger.total_violations,
+            reruns_after_crash=w.ledger.reruns_after_crash,
         )
 
     # ------------------------------------------------------------------ internals

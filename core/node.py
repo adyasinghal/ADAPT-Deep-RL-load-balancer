@@ -372,8 +372,9 @@ class ServerNode:
                 led.move(t, S.BUFFERED)
                 t.t_buffer = now
                 self.buffer.append(t)
+            elif t.state == S.DONE:
+                led.rerun_after_crash(t)  # it finished there, but every ACK and the DONE got lost
             else:
-                # e.g. it finished at the target but every ACK and the DONE were lost
                 led.violation("P1", f"{t!r} taken back from crashed {offer.target}")
 
     def _on_offer(self, msg: Message) -> None:
@@ -385,6 +386,11 @@ class ServerNode:
         for t in msg.tasks or ():
             if t.id in self.seen:
                 accepted.append(t.id)  # resent OFFER: we already hold it, just ACK again
+            elif t.state != S.IN_FLIGHT:
+                # the sender no longer considers this task offered (e.g. it was rejected and
+                # sent elsewhere); admitting it could run it twice
+                self.ctx.ledger.violation("P1", f"{t!r} offered to {self.idx} but not in flight")
+                rejected.append(t.id)
             elif self.q_count < cap and self._fits(t):
                 self.seen.add(t.id)
                 self._enqueue(t)
@@ -612,6 +618,7 @@ class CloudServer:
         self.queue: deque[Task] = deque()
         self.running: Task | None = None
         self.in_transit = 0
+        self.completed = 0
 
     def submit(self, task: Task) -> None:
         """Send a brand-new task to the cloud."""
@@ -641,6 +648,7 @@ class CloudServer:
         self.ctx.ledger.move(task, S.DONE)
         task.t_finish = self.ctx.clock.now + self.latency  # the result still has to come back
         self.running = None
+        self.completed += 1
         self.ctx.recorder.on_complete(task)
         if self.queue:
             self._start_next()
