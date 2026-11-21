@@ -1,0 +1,19 @@
+\begin{table}[t]
+\centering
+\footnotesize
+\caption{E4: control overhead, all 40 E3 runs per method}
+\label{tab:e4}
+\begin{tabular}{lllll}
+\toprule
+Method & Msgs / task & Poll msgs / task & Rounds / server / s & Decision latency (ms) \\
+\midrule
+EVBLB (B2) & 2.12 $\pm$ 0.06 & 1.13 $\pm$ 0.05 & 0.48 $\pm$ 0.01 & 34.6 $\pm$ 0.2 \\
+ADAPT & 1.29 $\pm$ 0.03 & 0.00 $\pm$ 0.00 & 1.35 $\pm$ 0.04 & 21.4 $\pm$ 0.1 \\
+Perfect info (B6) & 1.70 $\pm$ 0.02 & 0.00 $\pm$ 0.00 & 2.03 $\pm$ 0.08 & 21.0 $\pm$ 0.1 \\
+EVBLB 0.25 s (B3) & 6.32 $\pm$ 0.12 & 4.62 $\pm$ 0.10 & 2.03 $\pm$ 0.08 & 31.5 $\pm$ 0.1 \\
+ML-EVBLB (B4) & 0.91 $\pm$ 0.02 & 0.00 $\pm$ 0.00 & 0.48 $\pm$ 0.02 & 24.1 $\pm$ 0.2 \\
+TOPSIS (B7) & 1.91 $\pm$ 0.05 & 1.13 $\pm$ 0.05 & 0.47 $\pm$ 0.01 & 34.6 $\pm$ 0.2 \\
+Nearest (B1) & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 2.02 $\pm$ 0.08 & 20.9 $\pm$ 0.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
