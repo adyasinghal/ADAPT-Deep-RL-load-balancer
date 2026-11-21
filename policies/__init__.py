@@ -13,6 +13,7 @@ from typing import Any
 from policies.adapt import AdaptPolicy
 from policies.base import BasePolicy
 from policies.evblb import EVBLB, PerfectInfo
+from policies.ml_evblb import MLEvblb
 from policies.nearest import Nearest
 from policies.random_policy import RandomPolicy
 
@@ -22,6 +23,7 @@ REGISTRY: dict[str, Callable[..., BasePolicy]] = {
     "perfect": PerfectInfo,
     "random": RandomPolicy,
     "adapt": AdaptPolicy,
+    "ml_evblb": MLEvblb,
 }
 
 

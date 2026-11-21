@@ -726,6 +726,12 @@ class NodeView:
         """True utilisation of this server."""
         return self._node.utilisation()
 
+    def est_finish(self) -> float:
+        """Seconds until this server would finish its queue plus its current buffer."""
+        node = self._node
+        cpu = node.q_cpu + sum(t.cpu for t in node.buffer)
+        return cpu / (1000.0 * node.cpu_ghz)
+
     def true_neighbour_prem(self) -> list[float | None]:
         """True P_rem of each neighbour slot; None for empty slots and crashed servers."""
         out: list[float | None] = []
