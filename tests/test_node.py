@@ -220,3 +220,26 @@ def test_heartbeats_only_after_quiet_period():
     # the receiver timestamps the report with its own clock, on arrival
     w.engine.run_until(2.1)
     assert w.nodes[0].cache_time[0] == pytest.approx(2.0 + 0.003)
+
+
+def test_resend_only_carries_unanswered_tasks():
+    # server 1 can take one task: of a two-task OFFER one is accepted and one rejected
+    w = make_world(servers__queue_capacity=1)
+    offers = []
+    dropped = set()
+
+    def watch(msg):
+        if msg.kind == MsgKind.OFFER:
+            offers.append([t.id for t in msg.tasks])
+        if msg.kind in (MsgKind.ACK, MsgKind.DONE) and msg.kind not in dropped:
+            dropped.add(msg.kind)  # lose the first ACK and the first DONE
+            return True
+        return False
+
+    w.transport.drop_filter = watch
+    first, second = add_tasks(w, 0, [10, 10])
+    w.nodes[0].start_dispatch(send_action(0))
+    w.engine.run_until(1.0)
+    assert offers[0] == [first.id, second.id]
+    assert len(offers) >= 2 and all(ids == [first.id] for ids in offers[1:])
+    assert first.executor == 1 and second.state == S.BUFFERED and second.h == 1

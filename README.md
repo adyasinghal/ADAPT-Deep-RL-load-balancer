@@ -30,7 +30,7 @@ pip install -r requirements.txt
 ## Running things
 
 ```bash
-pytest -q                                              # all tests (about 1 s)
+pytest -q                                              # all tests, ~20 s (200 hypothesis examples)
 python -m sim.env --stub --steps 100                   # random stub env, same API as the real one
 python -m sim.env --policy evblb --duration 300        # one run, prints the summary as JSON
 python -m sim.env --policy nearest --rho 0.9 --workload W2
