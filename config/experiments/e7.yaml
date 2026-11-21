@@ -1,0 +1,11 @@
+# E7: scale. ADAPT was trained on n = 50 only; does the same network work for other sizes?
+name: e7
+methods:
+  - {name: evblb, dt: 2.0}
+  - {name: perfect}
+  - {name: adapt}
+grid:
+  workload: [W1]
+  rho: [0.7]
+  n: [10, 25, 100]
+  seed: [100, 101, 102, 103, 104]

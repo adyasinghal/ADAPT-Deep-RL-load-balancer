@@ -1,0 +1,18 @@
+# E9: fairness check. E3 on W1 at rho 0.7 with every added cost set to zero (EVBLB's own
+# assumptions). Does ADAPT's gain survive when polling and dispatching are free?
+name: e9
+scenario:
+  costs: {zero_costs: true}
+methods:
+  - {name: nearest}
+  - {name: evblb, dt: 2.0}
+  - {name: evblb, dt: 0.25}
+  - {name: perfect}
+  - {name: ml_evblb}
+  - {name: topsis}
+  - {name: adapt}
+grid:
+  workload: [W1]
+  rho: [0.7]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]

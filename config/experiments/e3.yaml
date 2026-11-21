@@ -1,0 +1,17 @@
+# E3: main comparison. Every baseline against ADAPT on four workloads at two loads.
+# evblb_dt0.25 is the best-tuned fixed interval: dt = 0.25 s had the lowest response time
+# at both rho = 0.5 and rho = 0.9 in E2. E4 (overhead) reads its columns from these runs.
+name: e3
+methods:
+  - {name: nearest}
+  - {name: evblb, dt: 2.0}
+  - {name: evblb, dt: 0.25}
+  - {name: perfect}
+  - {name: ml_evblb}
+  - {name: topsis}
+  - {name: adapt}
+grid:
+  workload: [W1, W2, W3, W4]
+  rho: [0.7, 0.9]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]

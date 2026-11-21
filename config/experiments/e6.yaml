@@ -1,0 +1,12 @@
+# E6: ablation. How much of ADAPT's gain comes from learning *when* (fixedDT only learns
+# where) and what fresh, polled neighbour state buys (poll).
+name: e6
+methods:
+  - {name: adapt}
+  - {name: adapt, variant: fixedDT}
+  - {name: adapt, variant: poll}
+grid:
+  workload: [W1, W2]
+  rho: [0.7]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]

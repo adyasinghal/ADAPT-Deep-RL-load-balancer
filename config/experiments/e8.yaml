@@ -1,0 +1,15 @@
+# E8: robustness (W6). 10% of the servers crash at t = 1800 s and 2% of messages are lost.
+# The invariant counters (violations) must stay at 0.
+name: e8
+scenario:
+  run: {duration: 2400.0}
+  costs: {p_loss: 0.02}
+  faults: {crash_fraction: 0.1, crash_time: 1800.0}
+methods:
+  - {name: evblb, dt: 2.0}
+  - {name: adapt}
+grid:
+  workload: [W6]
+  rho: [0.7]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]

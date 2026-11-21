@@ -1,0 +1,15 @@
+# E5: cold start. LBF over the first 2000 s for EVBLB, ADAPT and ADAPT trained without the
+# warm start, plus the network straight after behaviour cloning (before any DQN update).
+name: e5
+scenario:
+  run: {duration: 2000.0}
+methods:
+  - {name: evblb, dt: 2.0}
+  - {name: adapt}
+  - {name: adapt, variant: noWS}
+  - {name: adapt, label: adapt_ep0, weights: weights/adapt_bc.npz}
+grid:
+  workload: [W1]
+  rho: [0.7]
+  n: [50]
+  seed: [100, 101, 102, 103, 104]
