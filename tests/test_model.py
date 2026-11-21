@@ -5,6 +5,7 @@ import pytest
 
 from core.config import load_config
 from core.model import CostModel, Indicators, Topology
+from sim.workloads import rate_for_load
 
 
 def random_topology(n=40, seed=0):
@@ -76,3 +77,9 @@ def test_cost_model():
 
     zero = CostModel(load_config(dotted={"costs.zero_costs": True}), topo)
     assert zero.delay[0][1] == 0.0 and zero.dispatch_cost(10) == 0.0 and zero.poll_wait[0] == 0
+
+
+def test_rate_for_load():
+    cfg = load_config()
+    topo = Topology.from_arrays([[0, 0], [1, 1]], [4, 4], [500, 500], [1.0, 3.0], 5, 40)
+    assert rate_for_load(cfg, topo, 0.55) == pytest.approx(0.55 * 4000 / 550)
