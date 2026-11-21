@@ -100,6 +100,7 @@ def paired(df: pd.DataFrame, reference: str, metric: str, scale: float = 1.0) ->
 
 
 def table_e1() -> pd.DataFrame | None:
+    """E1 per network size: response time, blocking and LBF of B1 and B2."""
     df = load("e1")
     if df is None:
         return None
@@ -119,6 +120,7 @@ def table_e1() -> pd.DataFrame | None:
 
 
 def table_e2() -> pd.DataFrame | None:
+    """E2 per load and dispatch interval."""
     df = load("e2")
     if df is None:
         return None
@@ -149,6 +151,7 @@ def e3_metric(metric: str, digits: int, scale: float = 1.0):
 
 
 def table_e3_paired() -> pd.DataFrame | None:
+    """ADAPT minus each E3 baseline, per scenario, for response time and blocking."""
     df = load("e3")
     if df is None:
         return None
@@ -160,6 +163,7 @@ def table_e3_paired() -> pd.DataFrame | None:
 
 
 def table_e4() -> pd.DataFrame | None:
+    """E4 overhead per method over all E3 runs."""
     df = load("e3")
     if df is None:
         return None
@@ -179,6 +183,7 @@ def table_e4() -> pd.DataFrame | None:
 
 
 def table_e5() -> pd.DataFrame | None:
+    """E5 cold-start metrics per method."""
     df = load("e5")
     if df is None:
         return None
@@ -194,6 +199,7 @@ def table_e5() -> pd.DataFrame | None:
 
 
 def table_e6() -> pd.DataFrame | None:
+    """E6 ablation per workload."""
     df = load("e6")
     if df is None:
         return None
@@ -213,11 +219,13 @@ def table_e6() -> pd.DataFrame | None:
 
 
 def table_e7() -> pd.DataFrame | None:
+    """E7 response time per network size."""
     df = load("e7")
     return None if df is None else method_by_scenario(df, "resp_mean", 2, key="n")
 
 
 def table_e8() -> pd.DataFrame | None:
+    """E8 robustness to crashes and message loss."""
     df = load("e8")
     if df is None:
         return None
@@ -234,6 +242,7 @@ def table_e8() -> pd.DataFrame | None:
 
 
 def table_e9() -> pd.DataFrame | None:
+    """E9 response time and messages with the added costs on and off."""
     on, off = load("e3"), load("e9")
     if on is None or off is None:
         return None
