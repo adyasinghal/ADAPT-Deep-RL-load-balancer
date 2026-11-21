@@ -16,6 +16,7 @@ from policies.evblb import EVBLB, PerfectInfo
 from policies.ml_evblb import MLEvblb
 from policies.nearest import Nearest
 from policies.random_policy import RandomPolicy
+from policies.topsis import Topsis
 
 REGISTRY: dict[str, Callable[..., BasePolicy]] = {
     "nearest": Nearest,
@@ -24,6 +25,7 @@ REGISTRY: dict[str, Callable[..., BasePolicy]] = {
     "random": RandomPolicy,
     "adapt": AdaptPolicy,
     "ml_evblb": MLEvblb,
+    "topsis": Topsis,
 }
 
 
