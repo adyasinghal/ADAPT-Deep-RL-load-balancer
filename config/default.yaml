@@ -1,0 +1,82 @@
+# Default scenario. Every constant the simulator uses lives in this file.
+# Experiment configs only override what they change.
+#
+# Units: time in seconds, distance in area units, server memory/disk in GB,
+# task memory/disk in MB, task CPU demand in Mcycles, CPU speed in GHz.
+
+seed: 100
+
+run:
+  duration: 1800.0        # simulated seconds
+  arrival_cutoff: 60.0    # arrivals stop this long before the end (for makespan)
+  drain: true             # keep running after `duration` until every task is finished
+  drain_limit: 600.0      # ...but never for longer than this
+  decide_interval: 0.25   # every server decides this often
+  sample_interval: 1.0    # time-series sampling period
+
+topology:
+  n_servers: 50
+  area: 200.0             # square side length
+  nu: 5                   # max neighbours per server
+  psi: 40.0               # neighbour radius
+
+servers:
+  memory_gb: [4, 8, 16, 32]
+  disk_gb: [500, 1000, 2000]
+  cpu_ghz_min: 1.0
+  cpu_ghz_max: 4.0
+  cpu_ghz_step: 0.1
+  queue_capacity: 500     # counts the running task
+
+cloud:
+  cpu_ghz: 10.0
+  latency: 0.100          # one way
+
+tasks:
+  mem_mb: [100, 500]
+  disk_mb: [100, 1000]
+  cpu_mcycles: [100, 1000]
+  mean_cpu_mcycles: 550   # used to turn a target load rho into an arrival rate
+
+workload:
+  name: W1
+  rho: 0.7
+
+# EVBLB Eqs. 3-5, normalised. LBF always uses the fixed dt_ref window.
+indicators:
+  alpha: 0.3333333333333333
+  beta: 0.3333333333333333
+  gamma: 0.3333333333333333
+  dt_ref: 2.0
+
+costs:
+  zero_costs: false       # E9: sets every delay/cost below to 0
+  msg_base: 0.002         # one-way message delay = msg_base + msg_per_unit * distance
+  msg_per_unit: 0.0001
+  transfer_per_task: 0.008  # 1 MB per task over 1 Gbps
+  dispatch_base: 0.020    # dispatch round = dispatch_base + dispatch_per_task * batch
+  dispatch_per_task: 0.0005
+  p_loss: 0.0             # independent message loss probability
+
+protocol:
+  max_retries: 3          # OFFER resends before asking the failure detector
+  timeout_slack: 0.050    # added to the expected round trip of an OFFER
+  hop_limit: 2            # H_max: at this hop count only LOCAL is allowed
+  heartbeat_period: 2.0
+
+faults:
+  crash_fraction: 0.0
+  crash_time: null        # seconds; null = no crashes
+
+# ADAPT reward, per server per epoch (brief section 6). Tuned once, then frozen.
+reward:
+  w_wait: 1.0
+  w_lbf: 0.5
+  w_dispatch: 0.2
+  w_distance: 0.1
+  w_blocked: 5.0
+  wait_ref: 25.0          # 0.25 s x 100 tasks
+  dispatch_ref: 0.1
+
+invariants:
+  strict: false           # true = raise on the first violation (tests do this)
