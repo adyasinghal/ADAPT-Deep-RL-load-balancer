@@ -98,7 +98,8 @@ def style() -> None:
 def save(fig: plt.Figure, stem: str) -> None:
     """Write ``results/figures/<stem>.pdf`` and ``.png``."""
     FIGURES.mkdir(parents=True, exist_ok=True)
-    fig.savefig(FIGURES / f"{stem}.pdf", bbox_inches="tight")
+    # no creation date in the PDF, so regenerating an unchanged figure gives the same file
+    fig.savefig(FIGURES / f"{stem}.pdf", bbox_inches="tight", metadata={"CreationDate": None})
     fig.savefig(FIGURES / f"{stem}.png", dpi=200, bbox_inches="tight")
     plt.close(fig)
     print(f"wrote {stem}")
