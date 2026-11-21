@@ -1,11 +1,12 @@
 """How messages get from one node to another.
 
-``SimTransport`` delivers on the simulation clock. The asyncio demo will add an
-``AsyncTransport`` with the same ``send`` method, so ``ServerNode`` doesn't change.
+``SimTransport`` delivers on the simulation clock; ``AsyncTransport`` delivers between asyncio
+tasks for the demo. Both have the same ``send`` method, so ``ServerNode`` doesn't change.
 """
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Protocol
 
@@ -69,3 +70,53 @@ class SimTransport:
         if src.crashed or dst.crashed:
             return
         dst.receive(msg)
+
+
+class AsyncTransport:
+    """Message passing between asyncio tasks, for the demo.
+
+    Every node has an ``asyncio.Queue`` inbox. ``send`` puts the message into the destination's
+    inbox after the same per-pair delay as in the simulator (measured on ``clock``, which may
+    run faster than real time); each node's own task reads its inbox and calls
+    ``node.receive``. Loss and crash handling are the same as ``SimTransport``.
+    """
+
+    def __init__(
+        self,
+        clock,
+        costs: CostModel,
+        counter: MessageCounter,
+        rng: np.random.Generator,
+        p_loss: float = 0.0,
+    ) -> None:
+        self.clock = clock
+        self.costs = costs
+        self.counter = counter
+        self.rng = rng
+        self.p_loss = float(p_loss)
+        self.nodes: Sequence[ServerNode] = []
+        self.inboxes: list[asyncio.Queue[Message]] = []
+        self.lost = 0
+
+    def attach(self, nodes: Sequence[ServerNode]) -> None:
+        """Create one inbox per node."""
+        self.nodes = nodes
+        self.inboxes = [asyncio.Queue() for _ in nodes]
+
+    def send(self, msg: Message, extra_delay: float = 0.0) -> None:
+        """Count the message, maybe lose it, otherwise deliver it into the inbox later."""
+        self.counter.add(msg.kind)
+        if self.p_loss > 0.0 and self.rng.random() < self.p_loss:
+            self.lost += 1
+            return
+        delay = self.costs.delay[msg.src][msg.dst] + extra_delay
+        self.clock.call_at(self.clock.now + delay, self.inboxes[msg.dst].put_nowait, msg)
+
+    async def serve(self, idx: int) -> None:
+        """The receiving loop of node ``idx``: one asyncio task per node."""
+        node, inbox = self.nodes[idx], self.inboxes[idx]
+        while True:
+            msg = await inbox.get()
+            if node.crashed or self.nodes[msg.src].crashed:
+                continue
+            node.receive(msg)
