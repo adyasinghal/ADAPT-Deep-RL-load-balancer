@@ -102,6 +102,7 @@ class EdgeEnv:
         self.views: list[NodeView] = []
         self.policy_rng = np.random.default_rng(0)
         self.lbf = 0.0
+        self.util_mean = 0.0
 
     # ------------------------------------------------------------------ properties
 
@@ -200,7 +201,7 @@ class EdgeEnv:
         done = self._is_done(t)
         if (self._k % self.sample_every == 0 and t <= self.duration + 1e-9) or done:
             if t <= self.duration + 1e-9:
-                w.recorder.sample(t, self.lbf, w.counter)
+                w.recorder.sample(t, self.lbf, w.counter, self.util_mean)
             self._checker.check(t, w.nodes, w.cloud)
         info = self._info(masks)
         info["reward_parts"] = parts
@@ -364,7 +365,11 @@ class EdgeEnv:
             masks[:, FIRST_SEND:] &= nb_prem >= usage[:, None]
         self._pmask = pmask
         self._lbf_loc = lbf_loc
-        self.lbf = float(np.std(util[self._alive])) if self._alive.any() else 0.0
+        if self._alive.any():
+            self.lbf = float(np.std(util[self._alive]))
+            self.util_mean = float(util[self._alive].mean())
+        else:
+            self.lbf = self.util_mean = 0.0
         return obs, masks
 
     def _rewards(self) -> tuple[np.ndarray, np.ndarray]:

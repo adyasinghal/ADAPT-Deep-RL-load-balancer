@@ -77,11 +77,14 @@ class MetricsRecorder:
 
     # sampling and summary ------------------------------------------------------------
 
-    def sample(self, now: float, lbf: float, counter: MessageCounter) -> None:
+    def sample(
+        self, now: float, lbf: float, counter: MessageCounter, util_mean: float = math.nan
+    ) -> None:
         """Append one row to the time series and start a new 1 s window."""
         row: dict[str, float] = {
             "t": now,
             "lbf": lbf,
+            "util_mean": util_mean,
             "throughput": self._win_done / self.sample_interval,
             "resp_mean": self._win_resp / self._win_done if self._win_done else math.nan,
             "blocked": self.blocked,
