@@ -24,10 +24,20 @@ replay_capacity: 200000
 learning_starts: 5000         # transitions in the buffer before the first update
 updates_per_epoch: 1          # gradient steps per decision instant
 
-exploration:
+exploration:                  # used without the warm start (ADAPT-noWS)
   eps_start: 1.0
   eps_end: 0.05
   decay_steps: 50000          # decision instants (= gradient steps)
+
+warm_start:
+  enabled: true
+  expert_dt: 2.0
+  expert_episodes: 3
+  bc_steps: 3000
+  bc_td_weight: 1.0
+  eps_start: 0.2
+  eps_end: 0.02
+  decay_steps: 50000
 
 # Greedy check after every episode on one fixed *training* scenario. Episode rewards depend
 # on the topology and load drawn for that episode; this gives a learning curve you can read.

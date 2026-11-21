@@ -1,10 +1,12 @@
 """Train ADAPT's shared Q-network.
 
+    python -m rl.train --config config/train.yaml                  # ADAPT (warm start)
     python -m rl.train --config config/train.yaml --variant noWS     # no warm start
     python -m rl.train --config config/train.yaml --variant fixedDT  # learns only "where"
     python -m rl.train --config config/train.yaml --variant poll     # fresh polled loads
 
-Writes ``weights/adapt[_<variant>].pt`` and ``.npz`` plus one row per episode to
+Writes ``weights/adapt[_<variant>].pt`` and ``.npz`` (and ``..._bc`` after behaviour cloning
+when the warm start is on) plus one row per episode to
 ``results/training/adapt[_<variant>].csv``.
 """
 
@@ -23,6 +25,7 @@ from core.actions import HOLD, LOCAL
 from core.config import ROOT, load_config, read_yaml
 from policies.adapt import AdaptPolicy, weights_stem
 from rl.dqn import DQNAgent, DQNConfig, linear_epsilon
+from rl.imitation import EvblbExpert, agreement, behaviour_clone, collect_expert
 from rl.replay import ReplayBuffer
 from sim.env import EdgeEnv
 
@@ -42,7 +45,8 @@ class Trainer:
         self.agent = DQNAgent(DQNConfig.from_dict(tcfg["dqn"]), seed=seed)
         self.replay = ReplayBuffer(int(tcfg["replay_capacity"]), np.random.default_rng(seed + 2))
         self.policy = AdaptPolicy(variant)  # only for its env traits and masks
-        self.explore = tcfg["exploration"]
+        self.warm = bool(tcfg["warm_start"]["enabled"]) and variant != "noWS"
+        self.explore = tcfg["warm_start"] if self.warm else tcfg["exploration"]
         self.steps = 0
         self._episode = 0  # scenarios drawn so far (expert episodes included)
         self.trained_episodes = 0
@@ -74,6 +78,41 @@ class Trainer:
         return EdgeEnv(cfg, self.policy)
 
     # ------------------------------------------------------------------ phases
+
+    def warm_start(self, stem: Path) -> list[dict[str, Any]]:
+        """Record the EVBLB expert, clone it and save the cloned weights as ``<stem>_bc``."""
+        ws = self.tcfg["warm_start"]
+        expert = EvblbExpert(dt=float(ws["expert_dt"]))
+        scenarios = []
+
+        def make_env(_: int) -> tuple[EdgeEnv, int]:
+            env, seed, scenario = self.next_env()
+            scenarios.append(scenario)
+            return env, seed
+
+        started = time.perf_counter()
+        stats = collect_expert(
+            make_env, self.policy, expert, int(ws["expert_episodes"]), self.replay
+        )
+        losses = behaviour_clone(
+            self.agent,
+            self.replay,
+            int(ws["bc_steps"]),
+            self.agent.cfg.batch_size,
+            float(ws["bc_td_weight"]),
+        )
+        match = agreement(self.agent, self.replay)
+        self.agent.save(f"{stem}_bc", {"variant": self.variant, "phase": "bc"})
+        print(
+            f"warm start: {len(self.replay)} expert transitions, BC loss "
+            f"{np.mean(losses[:100]):.3f} -> {np.mean(losses[-100:]):.3f}, "
+            f"agrees with the expert on {match:.1%} of real choices "
+            f"({time.perf_counter() - started:.0f} s)"
+        )
+        rows = []
+        for i, (st, sc) in enumerate(zip(stats, scenarios, strict=True)):
+            rows.append({"phase": "expert", "episode": i - len(stats), **sc, **st})
+        return rows
 
     def train_episode(self) -> dict[str, Any]:
         """One epsilon-greedy episode with one gradient step per decision instant."""
@@ -149,6 +188,8 @@ def train(tcfg: dict[str, Any], variant: str, stem: Path, log_path: Path) -> pd.
     """Full training run; saves weights after every episode and returns the episode log."""
     trainer = Trainer(tcfg, variant)
     rows: list[dict[str, Any]] = []
+    if trainer.warm:
+        rows += trainer.warm_start(stem)
     meta = {"variant": variant, "config": tcfg}
     log_path.parent.mkdir(parents=True, exist_ok=True)
     for _ in range(int(tcfg["episodes"])):
@@ -175,7 +216,7 @@ def main() -> None:
     """Command-line entry point."""
     parser = argparse.ArgumentParser(description="Train ADAPT's shared Q-network.")
     parser.add_argument("--config", default=str(ROOT / "config" / "train.yaml"))
-    parser.add_argument("--variant", default="noWS", choices=["full", "noWS", "fixedDT", "poll"])
+    parser.add_argument("--variant", default="full", choices=["full", "noWS", "fixedDT", "poll"])
     parser.add_argument("--episodes", type=int, help="override the number of episodes")
     parser.add_argument("--out", help="weight file stem (default weights/adapt[_variant])")
     args = parser.parse_args()

@@ -1,4 +1,4 @@
-"""Tests for the RL pieces: network, replay, DQN update and the ADAPT policy."""
+"""Tests for the RL pieces: network, replay, DQN update, warm start and the ADAPT policy."""
 
 import numpy as np
 import pytest
@@ -7,6 +7,7 @@ import torch
 from core.actions import HOLD, LOCAL, N_ACTIONS, N_FEATURES
 from policies.adapt import AdaptPolicy
 from rl.dqn import DQNAgent, DQNConfig, linear_epsilon
+from rl.imitation import EvblbExpert
 from rl.networks import DuelingQNet, NumpyQNet, export_npz, greedy
 from rl.replay import ReplayBuffer
 from sim.env import EdgeEnv
@@ -137,4 +138,15 @@ def test_fixed_interval_variant_only_dispatches_every_two_seconds():
         assert not free[too_soon].any()
         actions = np.where(masks[:, LOCAL], LOCAL, HOLD)
         last[actions != HOLD] = env.now
+        obs, _, _, info = env.step(actions)
+
+
+def test_expert_respects_the_masks_it_is_given():
+    policy = AdaptPolicy()
+    expert = EvblbExpert()
+    env = EdgeEnv(small_cfg(), policy, strict=True)
+    obs, info = env.reset(seed=2)
+    for _ in range(40):
+        actions = expert.act(obs, info["masks"], env.views)
+        assert info["masks"][np.arange(env.n), actions].all()
         obs, _, _, info = env.step(actions)
