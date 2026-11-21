@@ -1,0 +1,44 @@
+# ADAPT training (centralised training, decentralised execution).
+# python -m rl.train --config config/train.yaml [--variant noWS|fixedDT|poll]
+#
+# Every server's transitions go into one replay buffer and train one shared network.
+# Training seeds 0-9 only; evaluation uses seeds 100-104.
+
+seed: 0                       # torch init + exploration
+episodes: 20
+episode_duration: 600.0       # simulated seconds per episode
+n_servers: 50
+train_seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+workloads: [W1, W2]           # alternated episode by episode
+rhos: [0.5, 0.7, 0.9]         # drawn per episode
+
+dqn:
+  lr: 1.0e-3
+  gamma: 0.95
+  batch_size: 256
+  tau: 0.005
+  hidden: 128
+  huber_delta: 1.0
+  grad_clip: 10.0
+replay_capacity: 200000
+learning_starts: 5000         # transitions in the buffer before the first update
+updates_per_epoch: 1          # gradient steps per decision instant
+
+exploration:
+  eps_start: 1.0
+  eps_end: 0.05
+  decay_steps: 50000          # decision instants (= gradient steps)
+
+# Greedy check after every episode on one fixed *training* scenario. Episode rewards depend
+# on the topology and load drawn for that episode; this gives a learning curve you can read.
+eval:
+  enabled: true
+  workload: W1
+  rho: 0.7
+  seed: 0
+
+# scenario overrides for training and eval episodes: no warm-up gap, no drain
+scenario:
+  run:
+    arrival_cutoff: 0.0
+    drain: false
