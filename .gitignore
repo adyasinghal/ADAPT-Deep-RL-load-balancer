@@ -12,3 +12,10 @@ results/*/*.csv
 !results/*/summary.csv
 !results/training/*.csv
 results/check/
+
+# Torch checkpoints are only for resuming training; evaluation, experiments and the demo load
+# the .npz files, and `python -m rl.train` rewrites these bit for bit.
+weights/*.pt
+# warm-start snapshots of the ablation variants; nothing evaluates them
+weights/adapt_fixedDT_bc.*
+weights/adapt_poll_bc.*

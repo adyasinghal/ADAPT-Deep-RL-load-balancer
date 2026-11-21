@@ -80,7 +80,7 @@ the report.
 - After every training episode a greedy, no-learning run on one fixed *training* scenario (W1, rho 0.7, seed 0) is logged as `eval_reward` / `eval_resp`. Raw episode rewards mostly reflect the topology and load drawn for that episode; this column is the learning curve to plot (F7).
 - Inference runs the exported `.npz` weights in numpy (`rl/numpy_net.py`); a test checks it matches the torch forward pass. Experiment workers never import torch.
 - ADAPT-fixedDT allows a dispatch only once 2 s have passed since that server's last dispatch (per-server timer, rule 5 still wins). ADAPT-poll sends no heartbeats (it would never read them).
-- Weights are small (~90 kB each) and committed under `weights/`; `python -m rl.train --variant <v>` reproduces them bit for bit.
+- The `.npz` weights (~90 kB each) are committed under `weights/`; that is all evaluation, the experiments and the demo load. The `.pt` torch checkpoints (only needed to resume training) and the warm-start snapshots of fixedDT/poll are git-ignored; `python -m rl.train --variant <v>` rewrites all of them bit for bit.
 
 ## Warm start (`rl/imitation.py`)
 - **(deviation)** The behaviour-cloning loss is cross-entropy on the masked Q-values *plus* the normal TD loss on the same batch. Cross-entropy alone fixes only the ranking of the Q-values and leaves their scale arbitrary, so the first DQN updates would undo it.

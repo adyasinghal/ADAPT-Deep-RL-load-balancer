@@ -107,7 +107,7 @@ command exits with status 1 if an invariant broke.
 | `sim/` | event engine, the RL env (`EdgeEnv`, `StubEnv`), workloads W1-W6, `run_episode` |
 | `policies/` | B1 nearest, B2/B3 EVBLB, B4 ML-enhanced EVBLB, B6 perfect information, B7 TOPSIS, random, ADAPT inference |
 | `rl/` | Q-network (torch and numpy), replay buffer, Double DQN, EVBLB imitation warm start, training |
-| `weights/` | trained ADAPT weights (`.pt` for torch, `.npz` for numpy inference) |
+| `weights/` | trained ADAPT weights as `.npz` (numpy inference); training also writes `.pt` torch checkpoints, which are not committed |
 | `experiments/` | experiment runner, results tables, method display names |
 | `plots/` | report figures |
 | `demo/` | the asyncio demo |
