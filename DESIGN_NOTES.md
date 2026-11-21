@@ -17,7 +17,10 @@ the report.
 - Global LBF is taken over live servers only.
 - Response time = finish - arrival. For cloud tasks the 100 ms return trip is included.
 - Arrivals stop `arrival_cutoff` (60 s) before the end. After `duration` the run keeps going (policy still acting, no new arrivals) until every task is finished, capped at 600 s ("drain"). The time series stops at `duration`; response-time stats include tasks finished during the drain so that methods that leave long queues are not flattered; throughput counts completions up to `duration`; makespan is the last completion (NaN if the cap is hit).
-- Only W1 and W2 are implemented in `sim/workloads.py` (W3-W6 belong to workstream 3). Crash injection and message loss are already supported through the `faults` and `costs.p_loss` config keys.
+- W3 (flash crowd): the first burst starts at t = 300 s, then one every 600 s, so a run doesn't open with a burst.
+- W4 (moving hotspot): the hotspot centre is drawn uniformly but kept at least 20 units from the edge, so the whole disk is inside the area.
+- W5 (diurnal) is defined relative to the configured rho: rho(t) = rho + 0.3 sin(2 pi t / 1800), which is the brief's 0.4 -> 1.0 -> 0.4 at rho = 0.7.
+- W6 is W1's traffic; its crashes and message loss come from the `faults` / `costs.p_loss` keys that `config/experiments/e8.yaml` sets.
 - `zero_costs` zeroes message delay, transfer, dispatch round and poll costs. It leaves `p_loss` and the cloud latency alone (they are not overhead costs).
 
 ## Protocol (`core/node.py`)
@@ -33,7 +36,7 @@ the report.
 - DONE is only sent when the executor is not the home server (a local completion needs no message).
 - Rejected and taken-back tasks keep their arrival time, so the HOLD mask (rule 5) and feature 5 use the age since arrival; P2 is checked on the time a task last entered the buffer.
 - If the target of a running dispatch round is found to have crashed before the round ends, the batch goes back into the buffer instead of being offered.
-- Heartbeats are only sent when the policy uses the load cache (`uses_cache`: ADAPT, B4); polling baselines would never read them, so they don't pay for them. The first heartbeats go out at t = 0.
+- Heartbeats are only sent when the policy uses the load cache (`uses_cache`: ADAPT only); polling baselines and B4 never read it, so they don't pay for them. The first heartbeats go out at t = 0.
 
 ## Env and observations (`sim/env.py`)
 - `reset(seed)` returns `(obs, info)` and masks are in `info["masks"]` (Gym style), since the brief's `reset -> obs` has nowhere to put the masks.
@@ -48,16 +51,24 @@ the report.
 - EVBLB dispatches on the global dt grid (t = dt, 2dt, ...), matching the paper's episodic intervals; it only goes earlier when rule 5 forces it (returned tasks). Its candidate set includes the server itself (Algorithm 2 starts from N = {e_i}); ties go to the server itself.
 - EVBLB picks its target from true P_rem at the decision instant, then pays the poll round (2 messages per neighbour, wait for the slowest reply) before the dispatch round. The values it uses can be up to one poll wait (~10 ms) older than the replies; under message loss it still "sees" every neighbour.
 - Note for the report: with alpha = beta = gamma = 1/3, P_rem is dominated by the static memory/disk terms, so EVBLB equalises P_rem rather than CPU utilisation. Its CPU-based LBF therefore stays high (about 0.29 at 300 s and 0.42 at 1800 s for n = 50, rho = 0.7, against 0.42-0.45 for nearest-only).
+- Also for the report: u_i is capped at 1 once a server holds 2 s of work, so at these loads many servers sit at 1 and the LBF saturates around 0.4-0.45 for every method (F1, F6). "Time to balance" (LBF below 0.05 for 60 s) is never reached by any method in E5; it is reported as "-".
+- B3 in E3/E9 is EVBLB with dt = 0.25 s, the interval with the lowest response time at both loads in E2. B6 uses the same interval with free information, so B3 and B6 come out almost identical.
+- B4 (ML-enhanced EVBLB), interval learner: per server, state = network-wide LBF rounded to 0.01 (as in the paper; it is the one global input any method gets, and it comes from `info["lbf"]`), initial interval random (Alg. 1, line 2), Q-update each time the chosen interval runs out.
+- B4, neighbour bandit: we read Eq. 16 literally. Only the chosen arm's preference moves, by step * (R - its mean reward) * its probability; Alg. 3 line 14 sets the other arms' reward to their own mean, so their term is zero. The mean is updated after the preference. The arm is the argmax of the softmax (line 9), ties at random, so B4 explores little once one arm has a positive mean.
+- B4 rewards: every ACK or REJECT message is one bandit reward for its arm (a partly rejected batch gives one of each); the LOCAL arm is rewarded at once from the server's own queue (`NodeView.est_finish`). B4 never polls and sends no heartbeats.
+- B7 (TOPSIS) uses fixed weights 0.7 (P_rem) / 0.3 (distance) instead of AHP, as the brief says. A criterion on which all candidates are equal gets normalised value 1 for all of them; ties go to the server itself.
 
 ## Experiments (`experiments/run.py`)
 - Method labels default to the policy's `name` (`nearest`, `evblb_dt2`, `perfect`, ...); an entry can set `label` explicitly.
-- Only the `summary.csv` of each experiment is committed; the per-run time series (about 14 MB for E1 + E2) are regenerated by the runner in about 90 s on 8 cores.
+- Only the `summary.csv` of each experiment is committed, with the tables and figures made from them. The per-run time series (about 18 MB for the ones F1, F6 and F8 use) are not; `make_plots` skips those three figures until E1, E5 and E3 have been rerun.
+- `--methods/--workloads/--rhos/--n` on the runner run a single cell of a grid (used for the fresh-clone check in the README).
 - E2 finding: with the brief's cost constants, EVBLB's response time *increases* monotonically with dt at both rho = 0.5 and 0.9 (no U-shape); dt = 0.25 s is best on latency and worst on messages per task (7.4 vs 1.8 at dt = 4). The 20 ms dispatch round is small next to 0.25 s, so short intervals are cheap in latency. A U-shape would need larger per-round costs.
 
 ## Tests
 - `tests/test_properties.py` runs 200 derandomised hypothesis examples (n 5-20, rho 0.3-1.1, loss up to 0.2, optional crash, random protocol traits, W1/W2) in strict mode; about 20 s.
 - Mutation check done by hand on the protocol: removing receiver de-duplication, resending already-rejected tasks, and giving up on a live server after k timeouts each make the suite fail.
-- B4 (Q-learning update) and B7 (TOPSIS score) tests belong with those baselines (workstream 3).
+- B4's Q-update is tested against Eq. 8 on a toy transition and B7's score against a hand-worked three-candidate example (`tests/test_ml_evblb.py`, `tests/test_topsis.py`).
+- ruff also enforces a docstring on every module, class and public function outside `tests/`.
 
 ## ADAPT agent (`rl/`, `policies/adapt.py`)
 - The reward is exactly the brief's (W counts tasks waiting in this server's own buffer and queue). We checked for "dumping" (a server is not charged for tasks it sends away): the trained agent sends LOCAL about 60% of the time and spreads the rest over its neighbours, so it does not dump; the local-LBF term and the capacity mask seem to be enough.
@@ -84,3 +95,24 @@ the report.
 - Episode 0 (straight after cloning, `adapt_ep0`): response time equal to EVBLB within noise (paired differences -2.3 to +0.0 s, all CIs include 0) with fewer messages (1.25-1.56 per task), but it blocks more (+0.8 to +5.3 points). So the "as good as B2 at episode 0" check holds for latency and messages, not for blocking.
 - Warm start vs no warm start: by episode 20 they are about equal (warm start -0.7 to -1.1 s better at rho 0.9, CIs include 0); the warm start mainly gives a better curve early on.
 - ADAPT-fixedDT is no better than the cloned network, so most of the gain comes from learning *when* to dispatch, which fits E2 (short intervals are cheap in latency). ADAPT-poll matches ADAPT on latency but needs about 5 messages per task.
+
+## Tables and figures (`experiments/tables.py`, `plots/make_plots.py`)
+- Every table cell is mean +- the half-width of the 95% t-interval over runs (5 seeds, or all 40 E3 runs of a method in E4). `e3_paired` takes ADAPT minus each baseline seed by seed; the brief's "gain only when CIs don't overlap" rule is conservative here because topologies differ a lot between seeds.
+- **(deviation)** F5 (messages per task) uses a linear axis, not a log axis: the values span less than a factor of 10, and bars on a log axis exaggerate small differences. Nearest-only sends no messages and is left out.
+- F3/F4 leave out nearest-only (about 40-70 s response time, 12-37% blocking), which would squash every other bar; its numbers are in the tables.
+- F8 cuts each run into 10 s blocks (so EVBLB's 2 s grid averages out), drops the first and last minute, and bins blocks by mean utilisation; a bin needs 20 blocks. It uses W2 and W3, the workloads whose load changes during a run.
+- Colours: one fixed colour per method in every figure, from a palette order checked for colour-blind separation; ADAPT's variants share ADAPT's orange and differ by line style. Three of the colours are low-contrast on white, which is why every number is also in a table.
+
+## M6 results (`results/`, test seeds 100-104)
+- E3, paired by seed against EVBLB: ADAPT's mean response time is lower in all 8 scenarios, by 4-9 s on W1/W2 and 8-28 s on W3/W4 (workloads it never trained on), with 1.3 instead of 2.1 messages per task and no polls. It blocks more: +0.2-0.3 percentage points on W1/W2 at rho 0.7, up to +5.8 on W4. It blocks less than B4 everywhere.
+- F8: ADAPT dispatches about every 0.7 s and holds a little longer (about 1 s) as utilisation approaches 1, i.e. it batches more when busy; B4's learned interval goes the other way (2.3 s -> 1.5 s).
+- E9: with every added cost at zero ADAPT still beats EVBLB on W1, rho 0.7 (4.3 s vs 8.3 s), so its gain is not just the overhead we added. The costs are small enough that every method barely changes.
+- E7: the network trained on n = 50 also beats EVBLB at n = 10, 25 and 100.
+- E8: 10% of servers crashing at 1800 s plus 2% message loss: no invariant violations and no re-runs for either method; ADAPT keeps its latency lead.
+- E5/E6 repeat the M4 picture: the warm start and no-warm-start networks end up equal; fixing the interval (fixedDT) loses most of the gain; polling (poll) keeps it but needs 5 messages per task.
+
+## Demo (`demo/run_demo.py`)
+- Eight servers in a 90 x 90 area (instead of 200 x 200) so that each has neighbours; the network trained on n = 50 in 200 x 200 is used as is, since every feature is local and normalised.
+- Arrivals go straight into the home server's buffer as they happen (no batching per interval); each server counts its own cell's arrivals for features 6-8.
+- The task ledger, metrics and failure detector are shared Python objects because the demo is one process; they are only used for checking and display, never by a server's decisions. The failure detector is the same oracle as in the simulator.
+- asyncio timers can fire a few ms late, so the demo's P2 check allows 0.02 x speed extra seconds.
