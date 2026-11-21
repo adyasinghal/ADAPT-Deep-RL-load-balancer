@@ -5,7 +5,7 @@ import pytest
 
 from core.config import load_config
 from core.model import CostModel, Indicators, Topology
-from sim.workloads import rate_for_load
+from sim.workloads import WORKLOADS, rate_for_load
 
 
 def random_topology(n=40, seed=0):
@@ -83,3 +83,27 @@ def test_rate_for_load():
     cfg = load_config()
     topo = Topology.from_arrays([[0, 0], [1, 1]], [4, 4], [500, 500], [1.0, 3.0], 5, 40)
     assert rate_for_load(cfg, topo, 0.55) == pytest.approx(0.55 * 4000 / 550)
+
+
+def test_flash_crowd_and_diurnal_rates():
+    cfg = load_config()
+    topo = random_topology(n=10)
+    rng = np.random.default_rng(0)
+    w3 = WORKLOADS["W3"](cfg, topo, 0.7, rng)
+    base = w3.base_rate
+    assert w3.rate(100.0) == base and w3.rate(310.0) == 3 * base and w3.rate(370.0) == base
+    assert w3.rate(910.0) == 3 * base
+    w5 = WORKLOADS["W5"](cfg, topo, 0.7, rng)
+    assert w5.rate(0.0) == pytest.approx(base)
+    assert w5.rate(450.0) == pytest.approx(base / 0.7 * 1.0)
+    assert w5.rate(1350.0) == pytest.approx(base / 0.7 * 0.4)
+
+
+def test_moving_hotspot_concentrates_traffic():
+    cfg = load_config()
+    w4 = WORKLOADS["W4"](cfg, random_topology(n=10), 0.7, np.random.default_rng(1))
+    pos = w4.positions(10.0, 20_000)
+    near = np.linalg.norm(pos - w4.centre(10.0), axis=1) <= 20.0 + 1e-9
+    # 40% from the disk plus the uniform arrivals that happen to land in it
+    assert 0.40 < near.mean() < 0.45
+    assert not np.array_equal(w4.centre(10.0), w4.centre(310.0))

@@ -3,8 +3,9 @@
 The arrival rate is piecewise constant and only changes on multiples of 0.25 s, so the env can
 draw each decision epoch's arrivals in one go (a Poisson count plus uniform times).
 
-Only W1 and W2 are implemented here; W3-W6 plug in the same way (subclass ``Workload`` and
-add it to ``WORKLOADS``).
+W1 stationary, W2 tidal, W3 flash crowd, W4 moving hotspot, W5 diurnal. W6 is W1's traffic;
+its crashes and message loss come from the ``faults`` and ``costs.p_loss`` config keys, which
+the experiment file sets (see ``config/experiments/e8.yaml``).
 """
 
 from __future__ import annotations
@@ -94,7 +95,80 @@ class Tidal(Workload):
         return np.clip(self.rng.normal(550.0, sd, size=k), *self.cpu_range)
 
 
-WORKLOADS: dict[str, type[Workload]] = {"W1": Workload, "W2": Tidal}
+class FlashCrowd(Workload):
+    """W3: three times the base rate for 60 s, every 600 s (first burst at t = 300 s)."""
+
+    name = "W3"
+    period = 600.0
+    offset = 300.0
+    burst = 60.0
+    factor = 3.0
+
+    def rate(self, t: float) -> float:
+        """Base rate, or ``factor`` times it during a burst."""
+        in_burst = (t - self.offset) % self.period < self.burst and t >= self.offset
+        return self.base_rate * (self.factor if in_burst else 1.0)
+
+
+class MovingHotspot(Workload):
+    """W4: 40% of arrivals come from a disk of radius 20 whose centre jumps every 300 s."""
+
+    name = "W4"
+    share = 0.4
+    radius = 20.0
+    period = 300.0
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._centres: dict[int, np.ndarray] = {}
+
+    def centre(self, t: float) -> np.ndarray:
+        """Hotspot centre during the 300 s block containing ``t`` (kept inside the area)."""
+        block = int(t // self.period)
+        if block not in self._centres:
+            self._centres[block] = self.rng.uniform(self.radius, self.area - self.radius, 2)
+        return self._centres[block]
+
+    def positions(self, t: float, k: int) -> np.ndarray:
+        """Uniform positions, except a ``share`` of them drawn uniformly in the hotspot disk."""
+        pos = self.rng.uniform(0.0, self.area, size=(k, 2))
+        hot = self.rng.random(k) < self.share
+        m = int(hot.sum())
+        if m:
+            r = self.radius * np.sqrt(self.rng.random(m))
+            angle = self.rng.uniform(0.0, 2 * np.pi, m)
+            pos[hot] = self.centre(t) + np.column_stack([r * np.cos(angle), r * np.sin(angle)])
+        return pos
+
+
+class Diurnal(Workload):
+    """W5: load follows rho(t) = rho + 0.3 sin(2 pi t / 1800), i.e. 0.4 -> 1.0 -> 0.4 at rho 0.7."""
+
+    name = "W5"
+    amplitude = 0.3
+    period = 1800.0
+
+    def __init__(
+        self, cfg: dict[str, Any], topology: Topology, rho: float, rng: np.random.Generator
+    ) -> None:
+        super().__init__(cfg, topology, rho, rng)
+        self.rho = rho
+        self.rate_per_rho = self.base_rate / rho if rho > 0 else 0.0
+
+    def rate(self, t: float) -> float:
+        """Rate for the load at time ``t`` (never negative)."""
+        rho_t = self.rho + self.amplitude * np.sin(2 * np.pi * t / self.period)
+        return max(rho_t, 0.0) * self.rate_per_rho
+
+
+WORKLOADS: dict[str, type[Workload]] = {
+    "W1": Workload,
+    "W2": Tidal,
+    "W3": FlashCrowd,
+    "W4": MovingHotspot,
+    "W5": Diurnal,
+    "W6": Workload,  # traffic as W1; crashes and loss are set through the config
+}
 
 
 def make_workload(cfg: dict[str, Any], topology: Topology, rng: np.random.Generator) -> Workload:
