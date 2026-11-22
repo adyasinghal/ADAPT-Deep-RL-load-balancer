@@ -9,7 +9,7 @@ up to five neighbours). It never polls. A message protocol around the network (r
 same server, de-duplication, admission control, a hop limit and a hold cap) keeps every task
 safe whatever the network outputs. The baseline is EVBLB (Sohrabi et al., GLOBECOM 2021).
 
-`DESIGN_NOTES.md` lists every assumption and deviation from the coding brief, plus the results
+`DESIGN_NOTES.md` lists every assumption and deviation from our project plan, plus the results
 in more detail.
 
 ## Results in short
@@ -36,7 +36,7 @@ Python 3.11. Torch is only needed to train; everything else runs on numpy.
 python3.11 -m venv .venv            # or: uv venv --python 3.11 .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pytest -q                           # 88 tests, about 25 s (200 hypothesis examples)
+pytest -q                           # 85 tests, about 25 s (200 hypothesis examples)
 ```
 
 ## Reproducing one E3 cell from a fresh clone
@@ -57,7 +57,6 @@ so the committed `results/e3/summary.csv` isn't overwritten by the one-cell run.
 | Command | What it does | Time (8 cores) |
 | --- | --- | --- |
 | `pytest -q` | unit, protocol, property-based, env, RL and demo tests | 25 s |
-| `python -m sim.env --stub --steps 100` | random stub env with the real API | 1 s |
 | `python -m sim.env --policy evblb --duration 300` | one run, prints its summary as JSON | 1-3 s |
 | `python -m rl.train --config config/train.yaml` | train ADAPT (warm start + 20 episodes) | 1-2 min |
 | `python -m rl.train --config config/train.yaml --variant noWS` | also `fixedDT`, `poll` | 1-2 min each |
@@ -69,7 +68,7 @@ so the committed `results/e3/summary.csv` isn't overwritten by the one-cell run.
 | `python -m experiments.run --config config/experiments/e7.yaml` | E7: n = 10, 25, 100 | 1 min |
 | `python -m experiments.run --config config/experiments/e8.yaml` | E8: crashes + 2% message loss | 25 s |
 | `python -m experiments.run --config config/experiments/e9.yaml` | E9: E3's W1 cell with zero costs | 1 min |
-| `python -m experiments.run --config config/experiments/adapt_eval.yaml` | ADAPT variants vs EVBLB (M4 check) | 3.5 min |
+| `python -m experiments.run --config config/experiments/adapt_eval.yaml` | ADAPT variants vs EVBLB | 3.5 min |
 | `python -m experiments.tables` | every table, markdown + LaTeX, into `results/tables/` | 1 s |
 | `python -m plots.make_plots` | every figure, PDF + PNG, into `results/figures/` | 3 s |
 | `python -m demo.run_demo` | live demo (below) | 60 s |
@@ -104,7 +103,7 @@ command exits with status 1 if an invariant broke.
 | `config/experiments/` | one YAML per experiment (E1-E3, E5-E9, the ADAPT evaluation) |
 | `config/train.yaml` | ADAPT training settings |
 | `core/` | model, `ServerNode` and its protocol, messages, transports, metrics, invariant checks, per-node features |
-| `sim/` | event engine, the RL env (`EdgeEnv`, `StubEnv`), workloads W1-W6, `run_episode` |
+| `sim/` | event engine, the RL env (`EdgeEnv`), workloads W1-W6, `run_episode` |
 | `policies/` | B1 nearest, B2/B3 EVBLB, B4 ML-enhanced EVBLB, B6 perfect information, B7 TOPSIS, random, ADAPT inference |
 | `rl/` | Q-network (torch and numpy), replay buffer, Double DQN, EVBLB imitation warm start, training |
 | `weights/` | trained ADAPT weights as `.npz` (numpy inference); training also writes `.pt` torch checkpoints, which are not committed |

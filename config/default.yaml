@@ -68,7 +68,7 @@ faults:
   crash_fraction: 0.0
   crash_time: null        # seconds; null = no crashes
 
-# ADAPT reward, per server per epoch (brief section 6). Tuned once, then frozen.
+# ADAPT reward, per server per epoch. Starting weights; not tuned.
 reward:
   w_wait: 1.0
   w_lbf: 0.5

@@ -1,7 +1,7 @@
 """Discrete-event core: a clock and a heap of timed callbacks.
 
 Events are ``(time, seq, callback, args)`` tuples; ``seq`` keeps events at the same time in the
-order they were scheduled, which makes runs deterministic. The event types of the brief map
+order they were scheduled, which makes runs deterministic. The model's event types map
 onto callbacks: message delivery, service completion, end of a dispatch round and OFFER
 timeouts are scheduled by the nodes and the transport, while the periodic DECIDE / SAMPLE
 instants and crashes are driven by the env between ``run_until`` calls.

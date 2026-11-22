@@ -3,7 +3,7 @@
 The env calls ``act`` once per decision instant (every 0.25 s) for *all* servers at once and
 gets back one action index per server (see ``core.actions``). Learners also get ``observe``.
 
-Besides the attributes in the brief, the env reads a few optional traits from the policy
+Besides ``act`` and ``observe``, the env reads a few optional traits from the policy
 (``BasePolicy`` gives the defaults):
 
 * ``needs_poll``     -- every dispatch first pays a poll round (EVBLB, TOPSIS, ADAPT-poll).

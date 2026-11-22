@@ -1,4 +1,4 @@
-"""Metrics: per-second time series and the per-run summary (brief section 7)."""
+"""Metrics: per-second time series and the per-run summary."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-# M4 check: trained ADAPT and its variants against EVBLB on unseen test seeds.
+# Trained ADAPT and its variants against EVBLB on unseen test seeds.
 # adapt_ep0 is the network straight after behaviour cloning (before any DQN update): it
 # should already be about as good as the EVBLB it imitates.
 name: adapt_eval

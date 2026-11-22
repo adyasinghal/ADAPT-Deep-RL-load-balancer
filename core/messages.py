@@ -8,7 +8,7 @@ from core.model import Task
 
 
 class MsgKind(IntEnum):
-    """Message types of the dispatch protocol (brief section 5)."""
+    """Message types of the dispatch protocol."""
 
     POLL = 0
     POLL_REPLY = 1

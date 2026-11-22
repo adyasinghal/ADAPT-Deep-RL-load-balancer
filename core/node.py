@@ -1,11 +1,11 @@
 """ServerNode: one edge server and the dispatch protocol it runs.
 
-The same class runs inside the simulator and (later) inside the asyncio demo. A node never
+The same class runs inside the simulator and inside the asyncio demo. A node never
 reads another node's state; all it knows about its neighbours comes from messages. Timers go
 through a ``Clock`` and messages through a ``Transport``, which are the only two things that
 differ between the simulator and the demo.
 
-Protocol rules from the brief, and where they live:
+The protocol rules, and where they live:
 
 1. OFFERed tasks stay in ``inflight`` until ACK/REJECT; on timeout the same OFFER is resent
    to the same server; after ``max_retries`` resends we ask the failure detector and, if the
