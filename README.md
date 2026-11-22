@@ -39,18 +39,24 @@ pip install -r requirements.txt
 pytest -q                           # 85 tests, about 25 s (200 hypothesis examples)
 ```
 
-## Reproducing one E3 cell from a fresh clone
+## Quick check: reproduce the main result
 
-The trained weights are in `weights/`, so this needs no training:
+The full comparison (experiment E3) runs every method on four workloads at two loads and takes
+about 6.5 minutes. To check our headline number in under a minute, run just one part of it:
+ADAPT against EVBLB on the steady workload (W1) at load 0.7.
 
 ```bash
 python -m experiments.run --config config/experiments/e3.yaml \
     --methods adapt evblb_dt2 --workloads W1 --rhos 0.7 --out results/check
 ```
 
-10 runs, about 25 s on 8 cores. The overview it prints should show a mean response time of
-4.21 s for `adapt` and 8.29 s for `evblb_dt2`, matching `results/e3/summary.csv`. Use `--out`
-so the committed `results/e3/summary.csv` isn't overwritten by the one-cell run.
+- No training is needed: the trained ADAPT network is already in `weights/`.
+- It runs 10 simulations (each method on the 5 test seeds) and takes under half a minute.
+- When it finishes it prints a summary table. Its `resp_mean` column (mean response time)
+  should read **4.211 for ADAPT** (`adapt`) and **8.288 for EVBLB** (`evblb_dt2`), the same
+  as in the results table above and in `results/e3/summary.csv`.
+- `--out results/check` writes this run's results to a separate folder, so the committed E3
+  results are not overwritten.
 
 ## Every command
 
@@ -85,8 +91,8 @@ F1, F6 and F8 also need the per-run time series, so rerun E1, E5 and E3 before
 ```bash
 python -m demo.run_demo                   # 8 servers, 60 s, real time, live terminal view
 python -m demo.run_demo --speed 4         # 4 simulated seconds per real second
-python -m demo.run_demo --no-tty --crash-at 20 --crash-node 3   # scripted, for recording
 ```
+<!-- python -m demo.run_demo --no-tty --crash-at 20 --crash-node 3   # scripted, for recording -->
 
 Eight `ServerNode`s (the class the simulator uses) run as independent asyncio tasks and talk
 through `AsyncTransport`. Each server builds its own observation and runs its own numpy copy of
