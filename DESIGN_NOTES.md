@@ -6,11 +6,11 @@ end with the results in more detail than the README. Items marked **(deviation)*
 our first design or to a paper's method.
 
 Labels (B1-B7 methods, W1-W6 workloads, E1-E9 experiments, F1-F9 figures), the protocol rules
-1-6, the guarantees P1-P5 and the 30 observation features are defined in the README; [1]-[5]
+1-6, the guarantees P1-P5 and the 30 observation features are defined in the README; [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358)-[[5]](https://doi.org/10.1109/ICASSP48485.2024.10445952)
 are the reference papers listed there.
 
 ## Notation
-- P_e: a server's normalised capacity, a weighted sum of its memory, disk and CPU (EVBLB [1],
+- P_e: a server's normalised capacity, a weighted sum of its memory, disk and CPU (EVBLB [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358),
   Eqs. 3-5); alpha, beta, gamma are those three weights (1/3 each).
 - P_rem: the capacity a server has left, P_e minus what its queued tasks use ("room left").
 - R_i: CPU speed of server i (GHz). T_cpu: a task's CPU demand (Mcycles).
@@ -21,7 +21,7 @@ are the reference papers listed there.
   each server has at most nu = 5 neighbours.
 - W (reward term): task-seconds spent waiting in the server's own buffer and queue during the
   interval.
-- AHP: the analytic hierarchy process, which TOLB [4] uses to weight its TOPSIS criteria.
+- AHP: the analytic hierarchy process, which TOLB [[4]](https://doi.org/10.3390/electronics13081511) uses to weight its TOPSIS criteria.
 - Epoch / decision instant: the 0.25 s interval between two decisions of a server.
 
 ## Configuration and setup
@@ -68,15 +68,15 @@ are the reference papers listed there.
 
 ## Baselines
 - B1 (nearest) dispatches LOCAL at every decision instant with a non-empty buffer and so pays a dispatch round each time, like every other method.
-- EVBLB dispatches on the global dt grid (t = dt, 2dt, ...), matching EVBLB's [1] episodic intervals; it only goes earlier when rule 5 forces it (returned tasks). Its candidate set includes the server itself (Algorithm 2 of [1] starts from N = {e_i}); ties go to the server itself.
+- EVBLB dispatches on the global dt grid (t = dt, 2dt, ...), matching EVBLB's [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) episodic intervals; it only goes earlier when rule 5 forces it (returned tasks). Its candidate set includes the server itself (Algorithm 2 of [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) starts from N = {e_i}); ties go to the server itself.
 - EVBLB picks its target from true P_rem at the decision instant, then pays the poll round (2 messages per neighbour, wait for the slowest reply) before the dispatch round. The values it uses can be up to one poll wait (~10 ms) older than the replies; under message loss it still "sees" every neighbour.
 - With alpha = beta = gamma = 1/3, P_rem is dominated by the static memory/disk terms, so EVBLB equalises P_rem rather than CPU utilisation. Its CPU-based LBF therefore stays high (about 0.29 at 300 s and 0.42 at 1800 s for n = 50, rho = 0.7, against 0.42-0.45 for nearest-only).
 - u_i is capped at 1 once a server holds 2 s of work, so at these loads many servers sit at 1 and the LBF saturates around 0.4-0.45 for every method (F1, F6). "Time to balance" (LBF below 0.05 for 60 s) is never reached by any method in E5; it is reported as "-".
 - B3 in E3/E9 is EVBLB with dt = 0.25 s, the interval with the lowest response time at both loads in E2. B6 uses the same interval with free information, so B3 and B6 come out almost identical.
-- B4 (ML-enhanced EVBLB), interval learner: per server, state = network-wide LBF rounded to 0.01 (as in [2]; it is the one global input any method gets, and it comes from `info["lbf"]`), initial interval random (Alg. 1 of [2], line 2), Q-update each time the chosen interval runs out.
-- B4, neighbour bandit: we read Eq. 16 of [2] literally. Only the chosen arm's preference moves, by step * (R - its mean reward) * its probability; Alg. 3 of [2], line 14, sets the other arms' reward to their own mean, so their term is zero. The mean is updated after the preference. The arm is the argmax of the softmax (line 9), ties at random, so B4 explores little once one arm has a positive mean.
+- B4 (ML-enhanced EVBLB), interval learner: per server, state = network-wide LBF rounded to 0.01 (as in [[2]](https://doi.org/10.1016/j.comcom.2024.04.009); it is the one global input any method gets, and it comes from `info["lbf"]`), initial interval random (Alg. 1 of [[2]](https://doi.org/10.1016/j.comcom.2024.04.009), line 2), Q-update each time the chosen interval runs out.
+- B4, neighbour bandit: we read Eq. 16 of [[2]](https://doi.org/10.1016/j.comcom.2024.04.009) literally. Only the chosen arm's preference moves, by step * (R - its mean reward) * its probability; Alg. 3 of [[2]](https://doi.org/10.1016/j.comcom.2024.04.009), line 14, sets the other arms' reward to their own mean, so their term is zero. The mean is updated after the preference. The arm is the argmax of the softmax (line 9), ties at random, so B4 explores little once one arm has a positive mean.
 - B4 rewards: every ACK or REJECT message is one bandit reward for its arm (a partly rejected batch gives one of each); the LOCAL arm is rewarded at once from the server's own queue (`NodeView.est_finish`). B4 never polls and sends no heartbeats.
-- B7 (TOPSIS) uses fixed weights 0.7 (P_rem) / 0.3 (distance) instead of the AHP weighting used in [4]. A criterion on which all candidates are equal gets normalised value 1 for all of them; ties go to the server itself.
+- B7 (TOPSIS) uses fixed weights 0.7 (P_rem) / 0.3 (distance) instead of the AHP weighting used in [[4]](https://doi.org/10.3390/electronics13081511). A criterion on which all candidates are equal gets normalised value 1 for all of them; ties go to the server itself.
 
 ## Experiments (`experiments/run.py`)
 - Method labels default to the policy's `name` (`nearest`, `evblb_dt2`, `perfect`, ...); an entry can set `label` explicitly.
@@ -87,7 +87,7 @@ are the reference papers listed there.
 ## Tests
 - `tests/test_properties.py` runs 200 derandomised hypothesis examples (n 5-20, rho 0.3-1.1, loss up to 0.2, optional crash, random protocol traits, W1/W2) in strict mode; about 20 s.
 - Mutation check done by hand on the protocol: removing receiver de-duplication, resending already-rejected tasks, and giving up on a live server after k timeouts each make the suite fail.
-- B4's Q-update is tested against Eq. 8 of [2] on a toy transition and B7's score against a hand-worked three-candidate example (`tests/test_ml_evblb.py`, `tests/test_topsis.py`).
+- B4's Q-update is tested against Eq. 8 of [[2]](https://doi.org/10.1016/j.comcom.2024.04.009) on a toy transition and B7's score against a hand-worked three-candidate example (`tests/test_ml_evblb.py`, `tests/test_topsis.py`).
 - ruff also enforces a docstring on every module, class and public function outside `tests/`.
 
 ## ADAPT agent (`rl/`, `policies/adapt.py`)

@@ -8,7 +8,7 @@ what it knows locally (its own buffer and queue, plus the load its neighbours la
 replies they send anyway) and decides **when** to pass on the tasks waiting in its buffer and
 **where** to send them: keep them, or hand them to one of up to five neighbours. It never asks
 its neighbours how busy they are (no polling). A message protocol around the network keeps
-every task safe whatever the network decides. We compare ADAPT with EVBLB [1] and its learned
+every task safe whatever the network decides. We compare ADAPT with EVBLB [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) and its learned
 variants in an event-driven simulator, and run it as eight independent asyncio servers in a
 demo.
 
@@ -44,8 +44,8 @@ Every server keeps making two decisions:
 - **Where** to dispatch: run the batch itself, or hand it to a neighbour? Choosing well needs
   each neighbour's current load, and asking for it (polling) costs a round trip every time.
 
-Existing methods fix one of these decisions and pay for the other. EVBLB [1] dispatches every
-2 s and polls all neighbours before every dispatch; its learned follow-ups [2], [3] learn only
+Existing methods fix one of these decisions and pay for the other. EVBLB [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) dispatches every
+2 s and polls all neighbours before every dispatch; its learned follow-ups [[2]](https://doi.org/10.1016/j.comcom.2024.04.009), [[3]](https://doi.org/10.1016/j.comcom.2025.108337) learn only
 one of the two decisions, or rely on network-wide information that no single server has.
 ADAPT learns both decisions with one network, using only local information.
 
@@ -57,7 +57,7 @@ ADAPT learns both decisions with one network, using only local information.
 | --- | --- |
 | 0-2 | the server itself: utilisation, queue length, CPU speed |
 | 3-5 | its buffer: number of tasks, their total CPU demand, age of the oldest task |
-| 6-8 | traffic in its area: arrival rate, last mean task size, task-size variance (from ATOA [5]) |
+| 6-8 | traffic in its area: arrival rate, last mean task size, task-size variance (from ATOA [[5]](https://doi.org/10.1109/ICASSP48485.2024.10445952)) |
 | 9 | local imbalance: spread of utilisation across the server and its neighbours |
 | 10-29 | 5 neighbour slots, 4 numbers each: last reported room left, age of that report, distance, whether the slot is filled |
 
@@ -73,7 +73,7 @@ reward = −(waiting time + 0.5 × local imbalance + 0.2 × dispatch cost + 0.1 
 decentralised execution:
 
 1. **Warm start:** the network first imitates EVBLB, so it starts from a sensible policy.
-2. **Dueling Double DQN** [6]-[8]: one network (30 → 128 → 128 → 7) is trained on the
+2. **Dueling Double DQN** [[6]](https://doi.org/10.1038/nature14236), [[7]](https://doi.org/10.1609/aaai.v30i1.10295), [[8]](https://arxiv.org/abs/1511.06581): one network (30 → 128 → 128 → 7) is trained on the
    experience of all 50 servers, for 20 episodes on workloads W1 and W2 at loads 0.5-0.9.
 3. **Execution:** each server runs its own frozen copy of the trained network, on its own data
    only. The trained weights are in `weights/`.
@@ -130,17 +130,17 @@ The five papers this project builds on and compares with:
 
 | | Paper | What it does | How this repository uses it |
 | --- | --- | --- | --- |
-| [1] | V. Sohrabi, M. E. Esmaeili, M. Dolati, A. Khonsari, A. Dadlani, "[EVBLB: Efficient Voronoi tessellation-based load balancing in edge computing networks](https://doi.org/10.1109/GLOBECOM46510.2021.9685358)," IEEE GLOBECOM, 2021. | Maps each user to its nearest server (Voronoi cells); every 2 s a server polls its neighbours and sends its whole batch to the one with the most room left. | Our system model (`core/model.py`), baselines B2, B3 and B6 (`policies/evblb.py`), and the expert ADAPT imitates in its warm start (`rl/imitation.py`). |
-| [2] | M. E. Esmaeili, A. Khonsari, V. Sohrabi, A. Dadlani, "[Reinforcement learning-based dynamic load balancing in edge computing networks](https://doi.org/10.1016/j.comcom.2024.04.009)," Computer Communications, vol. 222, 2024. | "ML-enhanced EVBLB": a Q-learner picks the dispatch interval and a bandit picks the neighbour, as two separate learners, with no polling. | Baseline B4 (`policies/ml_evblb.py`); the closest prior work. Our reward builds on its reward. |
-| [3] | M. E. Esmaeili, A. Khonsari, M. Dolati, "[Dynamic distance-based load balancing in mobile edge computing with deep reinforcement learning](https://doi.org/10.1016/j.comcom.2025.108337)," Computer Communications, vol. 244, 2025. | "Deep Q radius": a deep Q-network picks the radius within which EVBLB looks for neighbours, using network-wide information. | Not re-implemented (that is why there is no B5). We take its DQN set-up and its traffic inputs (features 6-7), but keep every input local. |
-| [4] | Z. Wu, Z. Jia, X. Pang, S. Zhao, "[Deep reinforcement learning-based task offloading and load balancing for vehicular edge computing](https://doi.org/10.3390/electronics13081511)," Electronics, vol. 13, no. 8, 2024. | "TOLB": one central deep RL agent; an overloaded server moves tasks to the server with the best TOPSIS score (free resources and distance). | Baseline B7 (`policies/topsis.py`): its TOPSIS rule. |
-| [5] | L. Wang, J. Zhang, "[Adaptive multi-armed bandit learning for task offloading in mobile edge computing](https://doi.org/10.1109/ICASSP48485.2024.10445952)," IEEE ICASSP, 2024. | "ATOA": treats offloading as a bandit and switches between two bandit strategies depending on how variable the traffic is. | Its task-size variance is ADAPT's feature 8, and its tidal traffic is our workload W2 (`sim/workloads.py`). |
+| [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) | V. Sohrabi, M. E. Esmaeili, M. Dolati, A. Khonsari, A. Dadlani, "[EVBLB: Efficient Voronoi tessellation-based load balancing in edge computing networks](https://doi.org/10.1109/GLOBECOM46510.2021.9685358)," IEEE GLOBECOM, 2021. | Maps each user to its nearest server (Voronoi cells); every 2 s a server polls its neighbours and sends its whole batch to the one with the most room left. | Our system model (`core/model.py`), baselines B2, B3 and B6 (`policies/evblb.py`), and the expert ADAPT imitates in its warm start (`rl/imitation.py`). |
+| [[2]](https://doi.org/10.1016/j.comcom.2024.04.009) | M. E. Esmaeili, A. Khonsari, V. Sohrabi, A. Dadlani, "[Reinforcement learning-based dynamic load balancing in edge computing networks](https://doi.org/10.1016/j.comcom.2024.04.009)," Computer Communications, vol. 222, 2024. | "ML-enhanced EVBLB": a Q-learner picks the dispatch interval and a bandit picks the neighbour, as two separate learners, with no polling. | Baseline B4 (`policies/ml_evblb.py`); the closest prior work. Our reward builds on its reward. |
+| [[3]](https://doi.org/10.1016/j.comcom.2025.108337) | M. E. Esmaeili, A. Khonsari, M. Dolati, "[Dynamic distance-based load balancing in mobile edge computing with deep reinforcement learning](https://doi.org/10.1016/j.comcom.2025.108337)," Computer Communications, vol. 244, 2025. | "Deep Q radius": a deep Q-network picks the radius within which EVBLB looks for neighbours, using network-wide information. | Not re-implemented (that is why there is no B5). We take its DQN set-up and its traffic inputs (features 6-7), but keep every input local. |
+| [[4]](https://doi.org/10.3390/electronics13081511) | Z. Wu, Z. Jia, X. Pang, S. Zhao, "[Deep reinforcement learning-based task offloading and load balancing for vehicular edge computing](https://doi.org/10.3390/electronics13081511)," Electronics, vol. 13, no. 8, 2024. | "TOLB": one central deep RL agent; an overloaded server moves tasks to the server with the best TOPSIS score (free resources and distance). | Baseline B7 (`policies/topsis.py`): its TOPSIS rule. |
+| [[5]](https://doi.org/10.1109/ICASSP48485.2024.10445952) | L. Wang, J. Zhang, "[Adaptive multi-armed bandit learning for task offloading in mobile edge computing](https://doi.org/10.1109/ICASSP48485.2024.10445952)," IEEE ICASSP, 2024. | "ATOA": treats offloading as a bandit and switches between two bandit strategies depending on how variable the traffic is. | Its task-size variance is ADAPT's feature 8, and its tidal traffic is our workload W2 (`sim/workloads.py`). |
 
 The learning methods ADAPT uses:
 
-- [6] V. Mnih et al., "[Human-level control through deep reinforcement learning](https://doi.org/10.1038/nature14236)," Nature, 2015 (DQN).
-- [7] H. van Hasselt, A. Guez, D. Silver, "[Deep reinforcement learning with double Q-learning](https://doi.org/10.1609/aaai.v30i1.10295)," AAAI, 2016 (Double DQN).
-- [8] Z. Wang et al., "[Dueling network architectures for deep reinforcement learning](https://arxiv.org/abs/1511.06581)," ICML, 2016 (dueling network).
+- [[6]](https://doi.org/10.1038/nature14236) V. Mnih et al., "[Human-level control through deep reinforcement learning](https://doi.org/10.1038/nature14236)," Nature, 2015 (DQN).
+- [[7]](https://doi.org/10.1609/aaai.v30i1.10295) H. van Hasselt, A. Guez, D. Silver, "[Deep reinforcement learning with double Q-learning](https://doi.org/10.1609/aaai.v30i1.10295)," AAAI, 2016 (Double DQN).
+- [[8]](https://arxiv.org/abs/1511.06581) Z. Wang et al., "[Dueling network architectures for deep reinforcement learning](https://arxiv.org/abs/1511.06581)," ICML, 2016 (dueling network).
 
 ## Setup
 
@@ -239,17 +239,17 @@ command exits with status 1 if an invariant broke.
 
 ## Glossary
 
-**Compared methods** (B1-B7; B5 was reserved for Deep Q radius [3], which we did not
+**Compared methods** (B1-B7; B5 was reserved for Deep Q radius [[3]](https://doi.org/10.1016/j.comcom.2025.108337), which we did not
 re-implement):
 
 | Label | Method | Name in results | Code |
 | --- | --- | --- | --- |
 | B1 | Nearest server only: every task runs where it arrives, no balancing (worst case) | `nearest` | `policies/nearest.py` |
-| B2 | EVBLB [1] with its published 2 s dispatch interval | `evblb_dt2` | `policies/evblb.py` |
+| B2 | EVBLB [[1]](https://doi.org/10.1109/GLOBECOM46510.2021.9685358) with its published 2 s dispatch interval | `evblb_dt2` | `policies/evblb.py` |
 | B3 | EVBLB with its best interval from E2 (0.25 s) | `evblb_dt0.25` | `policies/evblb.py` |
-| B4 | ML-enhanced EVBLB [2] | `ml_evblb` | `policies/ml_evblb.py` |
+| B4 | ML-enhanced EVBLB [[2]](https://doi.org/10.1016/j.comcom.2024.04.009) | `ml_evblb` | `policies/ml_evblb.py` |
 | B6 | Perfect information: EVBLB with free, instant load reports (a reference, not realistic) | `perfect` | `policies/evblb.py` |
-| B7 | TOPSIS target selection from TOLB [4] | `topsis` | `policies/topsis.py` |
+| B7 | TOPSIS target selection from TOLB [[4]](https://doi.org/10.3390/electronics13081511) | `topsis` | `policies/topsis.py` |
 | | ADAPT (ours) | `adapt` | `policies/adapt.py` |
 
 **ADAPT variants** (trained networks in `weights/`):
@@ -267,7 +267,7 @@ re-implement):
 | Label | Traffic |
 | --- | --- |
 | W1 | steady: constant arrival rate, users spread uniformly |
-| W2 | tidal: calm and volatile phases alternate (from ATOA [5]) |
+| W2 | tidal: calm and volatile phases alternate (from ATOA [[5]](https://doi.org/10.1109/ICASSP48485.2024.10445952)) |
 | W3 | flash crowds: short bursts at 3× the normal rate |
 | W4 | moving hotspot: a cluster of users that jumps to a new place every few minutes |
 | W5 | diurnal: load rises and falls slowly over a run (implemented, not used in the experiments) |
